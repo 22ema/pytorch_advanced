@@ -15,8 +15,8 @@ class TrainModel():
     def __init__(self, model):
         self.model = model
         self.use_pretrained = True
-        self.batch_size = 10
-        self.init_lr = 0.0001
+        self.batch_size = 300
+        self.init_lr = 0.01
         self.num_epochs = 10
         self.use_gpu = False
         self.dataset_size = None
@@ -29,6 +29,11 @@ class TrainModel():
             model_ft = models.resnet18(pretrained=self.use_pretrained)
             model_ft.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3,
                                    bias=False)
+            return model_ft
+        elif self.model == "resnet50":
+            model_ft = models.resnet50(pretrained=self.use_pretrained)
+            model_ft.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3,
+                                       bias=False)
             return model_ft
         elif self.model == "inception_v3":
             model_ft = models.inception_v3(pretrained=self.use_pretrained)
@@ -68,9 +73,8 @@ class TrainModel():
                     net.train(True)
                 else:
                     net.train(False)
-                running_loss = 0.0
-                running_corrects = 0
-                print(len(self.train_valid_dataloader[phase]))
+                epoch_loss = 0.0
+                epoch_corrects = 0
                 for inputs, labels in tqdm(self.train_valid_dataloader[phase]):
                     if self.use_gpu :
                         inputs = Variable(inputs.cuda())
@@ -85,26 +89,29 @@ class TrainModel():
                         loss.backward()
                         optimizer.step()
                         lr_schedule.step()
-                    running_loss += loss.data
-                    running_corrects += torch.sum(preds == labels.data)
-            epoch_loss = running_loss/len(self.train_valid_dataloader[phase])
-            epoch_acc = float(running_corrects)/len(self.train_valid_dataloader[phase])
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc
-            ))
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = net.state_dict()
-            inference_model = Inference(net, self.test_dataloader, self.use_gpu)
-            inference_model.inference()
+                    epoch_loss += loss.item() * inputs.size(0)
+                    epoch_corrects += torch.sum(preds == labels.data)
+                if phase == "train":
+                    total_epoch_loss = epoch_loss/(len(self.train_valid_dataloader[phase].dataset)*(1-self.valid_size))
+                    epoch_acc = epoch_corrects.double()/(len(self.train_valid_dataloader[phase].dataset)*(1-self.valid_size))
+                elif phase == "val":
+                    total_epoch_loss = epoch_loss/(len(self.train_valid_dataloader[phase].dataset)*self.valid_size)
+                    epoch_acc = epoch_corrects.double()/(len(self.train_valid_dataloader[phase].dataset)*self.valid_size)
+                print('{} Loss: {:.4f} Acc: {:.4f}'.format(
+                    phase, total_epoch_loss, epoch_acc
+                ))
+                if phase == 'val' and epoch_acc > best_acc:
+                    best_acc = epoch_acc
+                    best_model_wts = net.state_dict()
+#                 inference_model = Inference(net, self.test_dataloader, self.use_gpu)
+#                 inference_model.inference()
         time_elapsed = time.time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(
             float(time_elapsed) // 60.0, float(time_elapsed) % 60.0))
         print('Best val Acc : {:4f}'.format(best_acc))
         dir_name = time.strftime('%c', time.localtime(time.time()))
-        os.mkdir("./logs/"+dir_name)
         net.load_state_dict(best_model_wts)
-        torch.save(net.state_dict(), 'logs/'+dir_name+"/"+self.model+'_'+str(self.num_epochs)+'_'+'.pth')
+        torch.save(net.state_dict(), 'logs/'+self.model+'_'+str(self.num_epochs)+'_'+'.pth')
 
 
 

@@ -11,7 +11,7 @@ class Inference():
 
     def inference(self):
         net = self.model.eval()
-        for inputs, labels in tqdm(self.dataloader['test']):
+        for inputs, labels in tqdm(self.dataloader):
             if self.use_gpu:
                 inputs = Variable(inputs.cuda())
                 labels = Variable(labels.cuda())
@@ -19,7 +19,6 @@ class Inference():
                 inputs, labels = Variable(inputs), Variable(labels)
             outputs = net(inputs)
             softmax = nn.Softmax(dim=1)
-            output = softmax(output)
+            output = softmax(outputs)
             value, preds = torch.max(output.data, 1)
-            print(labels, preds)
 
