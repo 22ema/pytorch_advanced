@@ -9,6 +9,7 @@ from torch.utils.data import dataloader
 from torchvision import models
 from torch import nn
 import torch.optim as optim
+import tqdm
 
 def make_image_list(image_path, phase="train"):
     image_path = os.path.join(image_path, phase, "*/*.jpg")
@@ -34,7 +35,7 @@ def train_model(net, dataloader_dict, criterion, optimizer, epoch_num):
             epoch_corrects = 0.0
             if epoch == 0 and phase == 'train':
                 continue
-            for inputs, labels in dataloader_dict[phase]:
+            for inputs, labels in tqdm(dataloader_dict[phase]):
                 inputs.to(device)
                 labels.to(device)
                 optimizer.zero_grad()
