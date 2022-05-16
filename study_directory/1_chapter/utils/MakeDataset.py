@@ -16,7 +16,7 @@ class HymenopteraDataset(data.Dataset):
         '''
         return len(self.file_list)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index): ## __getitem__은 클래스의 인덱스에 접근할 때 자동으로 호출되는 메서드이다.
         '''
         전처리한 화상의 텐서 형식의 데이터와 라벨 return
         :param index:
